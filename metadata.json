@@ -1,0 +1,7 @@
+{
+  "name": "SkinLog - AI Skincare Expert",
+  "description": "SkinLog uses advanced AI to analyze your skin condition from a simple photo, providing personalized reports and ingredient-based skincare recommendations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
