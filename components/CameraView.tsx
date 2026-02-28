@@ -15,17 +15,25 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, lang }) =>
   const [isCameraActive, setIsCameraActive] = useState(false);
   const t = translations[lang];
 
+  React.useEffect(() => {
+    if (isCameraActive && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(err => console.error("Video play failed:", err));
+    }
+  }, [isCameraActive, stream]);
+
   const startCamera = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Your browser does not support camera access.");
+      return;
+    }
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'user' },
         audio: false 
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        setStream(mediaStream);
-        setIsCameraActive(true);
-      }
+      setStream(mediaStream);
+      setIsCameraActive(true);
     } catch (err) {
       alert("Please allow camera access to use this feature.");
       console.error(err);
@@ -38,6 +46,14 @@ const CameraView: React.FC<CameraViewProps> = ({ onCapture, onCancel, lang }) =>
       setStream(null);
       setIsCameraActive(false);
     }
+  }, [stream]);
+
+  React.useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [stream]);
 
   const captureImage = () => {

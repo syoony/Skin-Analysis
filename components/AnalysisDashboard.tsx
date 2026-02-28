@@ -17,23 +17,36 @@ interface AnalysisDashboardProps {
 const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result, onReset, lang }) => {
   const t = translations[lang];
 
+  const getHealthScore = (metric: string, value: number) => {
+    if (metric === t.metrics.hydration) return value;
+    // For all other metrics (oiliness, troubles, pigmentation, pores, wrinkles), 
+    // a higher raw value from AI means worse condition, so we invert it for a "Health Score".
+    return 100 - value;
+  };
+
   const radarData = [
-    { subject: t.metrics.hydration, A: result.metrics.hydration, fullMark: 100 },
-    { subject: t.metrics.oiliness, A: 100 - result.metrics.oiliness, fullMark: 100 },
-    { subject: t.metrics.troubles, A: 100 - result.metrics.troubles, fullMark: 100 },
-    { subject: t.metrics.pigmentation, A: 100 - result.metrics.pigmentation, fullMark: 100 },
-    { subject: t.metrics.pores, A: 100 - result.metrics.pores, fullMark: 100 },
-    { subject: t.metrics.wrinkles, A: 100 - result.metrics.wrinkles, fullMark: 100 },
+    { subject: t.metrics.hydration, A: getHealthScore(t.metrics.hydration, result.metrics.hydration), fullMark: 100 },
+    { subject: t.metrics.oiliness, A: getHealthScore(t.metrics.oiliness, result.metrics.oiliness), fullMark: 100 },
+    { subject: t.metrics.troubles, A: getHealthScore(t.metrics.troubles, result.metrics.troubles), fullMark: 100 },
+    { subject: t.metrics.pigmentation, A: getHealthScore(t.metrics.pigmentation, result.metrics.pigmentation), fullMark: 100 },
+    { subject: t.metrics.pores, A: getHealthScore(t.metrics.pores, result.metrics.pores), fullMark: 100 },
+    { subject: t.metrics.wrinkles, A: getHealthScore(t.metrics.wrinkles, result.metrics.wrinkles), fullMark: 100 },
   ];
 
   const barData = [
-    { name: t.metrics.hydration, value: result.metrics.hydration },
-    { name: t.metrics.oiliness, value: result.metrics.oiliness },
-    { name: t.metrics.troubles, value: result.metrics.troubles },
-    { name: t.metrics.pigmentation, value: result.metrics.pigmentation },
-    { name: t.metrics.pores, value: result.metrics.pores },
-    { name: t.metrics.wrinkles, value: result.metrics.wrinkles },
+    { name: t.metrics.hydration, value: getHealthScore(t.metrics.hydration, result.metrics.hydration) },
+    { name: t.metrics.oiliness, value: getHealthScore(t.metrics.oiliness, result.metrics.oiliness) },
+    { name: t.metrics.troubles, value: getHealthScore(t.metrics.troubles, result.metrics.troubles) },
+    { name: t.metrics.pigmentation, value: getHealthScore(t.metrics.pigmentation, result.metrics.pigmentation) },
+    { name: t.metrics.pores, value: getHealthScore(t.metrics.pores, result.metrics.pores) },
+    { name: t.metrics.wrinkles, value: getHealthScore(t.metrics.wrinkles, result.metrics.wrinkles) },
   ];
+
+  const getBarColor = (score: number) => {
+    if (score >= 80) return '#10b981'; // Green (Excellent)
+    if (score >= 50) return '#f59e0b'; // Orange (Fair)
+    return '#ef4444'; // Red (Needs Attention)
+  };
 
   const recommendedProducts = MOCK_PRODUCTS.filter(p => 
     p.ingredients.some(ing => result.recommendedIngredients.some(ri => ri.toLowerCase().includes(ing.toLowerCase())))
@@ -77,7 +90,7 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result, onReset, 
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                <PolarGrid stroke="#e2e8f0" />
+                <PolarGrid stroke="#e2e8f0" gridCount={5} />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
                 <Radar name="Skin Metrics" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.6} />
               </RadarChart>
@@ -96,7 +109,7 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result, onReset, 
                 <Tooltip />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                   {barData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value > 70 ? '#ef4444' : entry.value > 40 ? '#f59e0b' : '#10b981'} />
+                    <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
                   ))}
                 </Bar>
               </BarChart>
@@ -162,19 +175,26 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ result, onReset, 
         <h3 className="text-2xl font-bold text-gray-900">{t.bestMatches}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {(recommendedProducts.length > 0 ? recommendedProducts : MOCK_PRODUCTS.slice(0, 3)).map((product) => (
-            <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group">
-              <div className="h-48 overflow-hidden bg-gray-50 relative">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-indigo-600 shadow-sm border border-indigo-50">
-                  {product.category}
-                </div>
-              </div>
+            <div key={product.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:border-indigo-200 transition-colors">
               <div className="p-5 space-y-3">
-                <div>
+                <div className="flex justify-between items-start">
                   <p className="text-xs text-indigo-500 font-bold uppercase tracking-wider">{product.brand}</p>
-                  <h4 className="font-bold text-gray-900 line-clamp-1">{product.name}</h4>
+                  <span className="bg-indigo-50 px-2 py-0.5 rounded text-[10px] font-bold text-indigo-600">
+                    {product.category}
+                  </span>
                 </div>
-                <button className="w-full py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition">
+                <div>
+                  <h4 className="font-bold text-gray-900 line-clamp-2 min-h-[3rem]">{product.name}</h4>
+                  <p className="text-xs text-gray-500 mt-2 line-clamp-2">{product.matchReason}</p>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {product.ingredients.slice(0, 2).map((ing, i) => (
+                    <span key={i} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                      {ing}
+                    </span>
+                  ))}
+                </div>
+                <button className="w-full py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition mt-4">
                   {t.buyNow}
                 </button>
               </div>
